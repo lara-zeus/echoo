@@ -18,6 +18,12 @@ Zeus Echoo is filamentphp form component to record audio from your browser
 * **UI Form Manager:** beautifully designed form builder, data collections, and Categories
 
 ![](https://larazeus.com/images/screenshots/echoo/admin-1.webp)
+![](https://larazeus.com/images/screenshots/echoo/admin-2.webp)
+![](https://larazeus.com/images/screenshots/echoo/admin-3.webp)
+![](https://larazeus.com/images/screenshots/echoo/admin-4.webp)
+![](https://larazeus.com/images/screenshots/echoo/admin-5.webp)
+![](https://larazeus.com/images/screenshots/echoo/admin-6.webp)
+![](https://larazeus.com/images/screenshots/echoo/admin-7.webp)
 
 ## More Details
 
