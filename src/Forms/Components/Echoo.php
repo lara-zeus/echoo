@@ -25,6 +25,10 @@ class Echoo extends Field
                 return null;
             }
 
+            if (is_string($state) && str_starts_with($state, $this->getDirectory()) && Storage::disk($this->getDisk())->exists($state)) {
+                return $state;
+            }
+
             $file = $state;
 
             if (! $state instanceof TemporaryUploadedFile) {
