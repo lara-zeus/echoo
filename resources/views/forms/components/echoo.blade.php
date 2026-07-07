@@ -74,7 +74,7 @@
                     let file = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
 
                     // Upload via Filament/Livewire core asset uploader
-                    @this.upload('{{ $getStatePath() }}', file,
+                    $wire.upload('{{ $getStatePath() }}', file,
                         async (uploadedName) => {
                             this.state = uploadedName;
                             this.isUploading = false;
