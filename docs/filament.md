@@ -25,4 +25,4 @@ Zeus Echoo is filamentphp form component to record audio from your browser
 - [Discord](https://discord.com/channels/883083792112300104/1282746904303894579)
 - [Docs](https://larazeus.com/docs/echoo)
 - [Github](https://github.com/lara-zeus/echoo)
-- [Demo](https://demo.larazeus.com/echoo)
+- [Demo](https://demo.larazeus.com/admin/components-demo/echoo)

@@ -7,7 +7,7 @@ weight: 1
 
 Lara Zeus Echo ⚡️ (Audio Recording Component) is a Filament PHP audio recording component.
 
-**[Demo](https://demo.larazeus.com/echoo) · [Github](https://github.com/lara-zeus/echoo) · [Discord](https://discord.com/channels/883083792112300104)**
+**[Demo](https://demo.larazeus.com/admin/components-demo/echoo) · [Github](https://github.com/lara-zeus/echoo) · [Discord](https://discord.com/channels/883083792112300104)**
 
 ## Features
 
