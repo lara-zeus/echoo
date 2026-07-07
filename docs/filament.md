@@ -10,6 +10,7 @@ Zeus Echoo is filamentphp form component to record audio from your browser
 - 🔥 Simple clean UI
 - 🔥 Record and upload
 - 🔥 Costumire the disc and directory
+- 🔥 Form, Infolist, and Table components
 
 
 ## Screenshots

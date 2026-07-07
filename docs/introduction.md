@@ -17,6 +17,7 @@ Lara Zeus Echo ⚡️ (Audio Recording Component) is a Filament PHP audio record
 - 🔥 Simple clean UI
 - 🔥 Record and upload
 - 🔥 Costumire the disc and directory
+- 🔥 Form, Infolist, and Table components
 
 ## Support
 
