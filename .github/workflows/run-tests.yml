@@ -1,0 +1,62 @@
+name: run-tests
+
+on:
+  push:
+    branches: [1.x]
+  pull_request:
+    branches: [1.x]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        php: [8.2, 8.3, 8.4]
+        laravel: [11.*, 12.*]
+        stability: [prefer-stable]
+        include:
+          - laravel: 11.*
+            testbench: 9.*
+          - laravel: 12.*
+            testbench: 10.*
+
+    name: P${{ matrix.php }} - L${{ matrix.laravel }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
+          coverage: none
+
+      - name: Setup problem matchers
+        run: |
+          echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+          echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+
+      - name: Cache Blade views
+        run: ./vendor/bin/testbench view:cache
+      - name: Execute tests (parallel)
+        id: parallel-tests
+        continue-on-error: true
+        run: ./vendor/bin/pest --configuration=phpunit.sqlite.xml --parallel
+      - name: Execute tests (non-parallel fallback)
+        if: steps.parallel-tests.outcome == 'failure'
+        id: non-parallel-tests
+        run: ./vendor/bin/pest --configuration=phpunit.sqlite.xml
+      - name: Warn about parallel test failure
+        if: steps.parallel-tests.outcome == 'failure' && steps.non-parallel-tests.outcome == 'success'
+        run: |
+          echo "::warning::Parallel tests failed but non-parallel tests passed. This may indicate a race condition or test isolation issue."
+
