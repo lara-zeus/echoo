@@ -152,10 +152,12 @@
             </template>
 
             <!-- Uploading State -->
-            <div x-show="isUploading" x-cloak class="flex items-center space-x-2 text-sm font-medium text-primary-600 dark:text-primary-400">
-                <x-filament::loading-indicator class="h-5 w-5" />
-                <span>{{ __('zeus-echoo::echoo.uploading') }}</span>
-            </div>
+            <template x-if="isUploading">
+                <div class="flex items-center space-x-2 text-sm font-medium text-primary-600 dark:text-primary-400">
+                    <x-filament::loading-indicator class="h-5 w-5" />
+                    <span>{{ __('zeus-echoo::echoo.uploading') }}</span>
+                </div>
+            </template>
 
             <!-- Completed / Has Audio State -->
             <template x-if="state && !recording && !isUploading">
