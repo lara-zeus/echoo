@@ -20,3 +20,4 @@ yarn-error.log
 /vendor
 .DS_Store
 composer.lock
+/coverage-report

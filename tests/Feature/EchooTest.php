@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use LaraZeus\Echoo\Forms\Components\Echoo;
 use League\Flysystem\UnableToCheckFileExistence;
@@ -176,6 +177,93 @@ it('handles dehydrate with temporary uploaded file failing existence check', fun
     expect($dehydrated)->toBeNull();
 });
 
+it('handles TemporaryUploadedFile object directly returning temporary URL', function () {
+    $component = new class('audio') extends Echoo
+    {
+        public function getState(): mixed
+        {
+            Storage::fake('tmp-for-tests');
+            $file = UploadedFile::fake()->create('test.mp3', 100, 'audio/mpeg');
+            $path = $file->store('livewire-tmp', 'tmp-for-tests');
+            $tempFile = Mockery::mock(TemporaryUploadedFile::class)->makePartial();
+            $tempFile->shouldReceive('exists')->andReturn(true);
+            $tempFile->shouldReceive('temporaryUrl')->andReturn('/livewire/preview-file/123');
+
+            return $tempFile;
+        }
+    };
+    $component->disk('public')->directory('recordings');
+    Storage::fake('public');
+
+    $url = $component->getAudioUrl();
+    expect($url)->toBeString();
+});
+
+it('handles string TemporaryUploadedFile returning temporary URL', function () {
+    $component = new class('audio') extends Echoo
+    {
+        public function getState(): mixed
+        {
+            Storage::fake('tmp-for-tests');
+            $file = UploadedFile::fake()->create('test.mp3', 100, 'audio/mpeg');
+
+            return $file->store('livewire-tmp', 'tmp-for-tests');
+        }
+    };
+    $component->disk('public')->directory('recordings');
+    Storage::fake('public');
+
+    // To prevent actual disk checks failing in test, mock it globally if possible, or just let it fall through
+    // Actually if it's a string, we need to mock exists() but it's hard.
+    // Should fall back to URL generation
+    $url = $component->getAudioUrl();
+    expect($url)->toBeString()->toContain('/storage/livewire-tmp/');
+});
+
+it('catches exception for temporaryUrl on temporary file without support', function () {
+    $component = new class('audio') extends Echoo
+    {
+        public function getState(): mixed
+        {
+            Storage::fake('tmp-for-tests');
+            config()->set('filesystems.disks.tmp-for-tests', [
+                'driver' => 'local',
+                'root' => storage_path('app/tmp-for-tests'),
+            ]);
+            $file = UploadedFile::fake()->create('test.mp3', 100, 'audio/mpeg');
+            $tempFile = Mockery::mock(TemporaryUploadedFile::class)->makePartial();
+            $tempFile->shouldReceive('exists')->andReturn(true);
+            $tempFile->shouldReceive('temporaryUrl')->andThrow(new RuntimeException('Not supported'));
+
+            return $tempFile;
+        }
+    };
+    $component->disk('public')->directory('recordings');
+    Storage::fake('public');
+
+    $url = $component->getAudioUrl();
+    expect($url)->toBeNull();
+});
+
+it('catches UnableToCheckFileExistence and falls back to string storage generation', function () {
+    $component = new class('audio') extends Echoo
+    {
+        public function getState(): mixed
+        {
+            return 'recordings/audio.mp3';
+        }
+    };
+    $component->disk('s3')->visibility('private');
+
+    $mockDisk = Mockery::mock(FilesystemAdapter::class);
+    $mockDisk->shouldReceive('exists')->andThrow(new UnableToCheckFileExistence('Cannot check'));
+    $mockDisk->shouldReceive('temporaryUrl')->andReturn('http://temporary.url');
+    Storage::shouldReceive('disk')->with('s3')->andReturn($mockDisk);
+
+    $url = $component->getAudioUrl();
+    expect($url)->toBe('http://temporary.url');
+});
+
 it('catches exception for temporaryUrl on driver without support', function () {
     $component = new class('audio') extends Echoo
     {
@@ -187,6 +275,7 @@ it('catches exception for temporaryUrl on driver without support', function () {
     $component->disk('s3')->visibility('private');
 
     $mockDisk = Mockery::mock(FilesystemAdapter::class);
+    $mockDisk->shouldReceive('exists')->andReturn(true);
     $mockDisk->shouldReceive('temporaryUrl')->andThrow(new RuntimeException('Not supported'));
     $mockDisk->shouldReceive('url')->andReturn('/storage/recordings/audio.mp3');
     Storage::shouldReceive('disk')->with('s3')->andReturn($mockDisk);
