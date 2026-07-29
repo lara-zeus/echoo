@@ -1,15 +1,14 @@
 @php
-    use Illuminate\Support\Facades\Storage;
-    $state = $getState();
+    $url = $getAudioUrl();
 @endphp
 
-@if ($state)
+@if ($url)
     <div
         x-data="{
             playing: false,
             audio: null,
             init() {
-                this.audio = new Audio('{{ Storage::disk($getDisk())->url($state) }}');
+                this.audio = new Audio(@js($url));
                 this.audio.onended = () => { this.playing = false; };
             },
             toggle() {

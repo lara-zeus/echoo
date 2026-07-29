@@ -1,6 +1,5 @@
 @php
-    use Illuminate\Support\Facades\Storage;
-    $getState = $getState();
+    $url = $getAudioUrl();
 @endphp
 <x-dynamic-component
     :component="$getFieldWrapperView()"
@@ -33,8 +32,8 @@
             this.checkPermission();
 
             // If there's an existing saved file path, create a preview URL for it
-            if (this.state) {
-                this.audioUrl = '{{ Storage::disk($getDisk())->url($getState) }}';
+            if (this.state && @js($url)) {
+                this.audioUrl = @js($url);
             }
         },
 
@@ -168,7 +167,7 @@
                 <div class="flex items-center space-x-4 w-full max-w-sm">
                     <div class="flex-1">
                         <audio
-                            src="{{ Storage::disk($getDisk())->url($getState) }}"
+                            x-bind:src="audioUrl"
                             controls class="w-full h-10 rounded-lg"></audio>
                     </div>
                     <x-filament::icon-button
