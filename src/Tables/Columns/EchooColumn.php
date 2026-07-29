@@ -3,12 +3,13 @@
 namespace LaraZeus\Echoo\Tables\Columns;
 
 use Filament\Tables\Columns\Column;
+use LaraZeus\Echoo\Concerns\HasAudioConfiguration;
 
 class EchooColumn extends Column
 {
-    protected string $view = 'zeus-echoo::tables.columns.echoo-column';
+    use HasAudioConfiguration;
 
-    protected string $disk = 'public';
+    protected string $view = 'zeus-echoo::tables.columns.echoo-column';
 
     protected function setUp(): void
     {
@@ -18,17 +19,5 @@ class EchooColumn extends Column
             ->disabledClick()
             ->sortable(false)
             ->searchable(false);
-    }
-
-    public function disk(string $disk): static
-    {
-        $this->disk = $disk;
-
-        return $this;
-    }
-
-    public function getDisk(): string
-    {
-        return $this->disk;
     }
 }

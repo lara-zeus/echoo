@@ -5,14 +5,15 @@ namespace LaraZeus\Echoo\Forms\Components;
 use Filament\Forms\Components\Field;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use LaraZeus\Echoo\Concerns\HasAudioConfiguration;
 use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class Echoo extends Field
 {
-    protected string $view = 'zeus-echoo::forms.components.echoo';
+    use HasAudioConfiguration;
 
-    protected string $disk = 'public';
+    protected string $view = 'zeus-echoo::forms.components.echoo';
 
     protected string $directory = 'recordings';
 
@@ -29,48 +30,34 @@ class Echoo extends Field
                 return $state;
             }
 
-            $file = $state;
-
             if (! $state instanceof TemporaryUploadedFile) {
                 $file = TemporaryUploadedFile::createFromLivewire($state);
+            } else {
+                $file = $state;
             }
 
-            if ($file) {
-                try {
-                    if (! $file->exists()) {
-                        return null;
-                    }
-                } catch (UnableToCheckFileExistence) {
+            try {
+                if (! $file->exists()) {
                     return null;
                 }
-
-                $filename = Str::ulid() . '.' . $file->getClientOriginalExtension();
-
-                $path = $file->storeAs(
-                    $this->getDirectory(),
-                    $filename,
-                    $this->getDisk(),
-                );
-
-                if (config('filesystems.disks.' . $this->getDisk() . '.visibility') === 'public') {
-                    rescue(fn () => Storage::disk($this->getDisk())->setVisibility($path, 'public'), report: false);
-                }
-
-                return $path;
+            } catch (UnableToCheckFileExistence) {
+                return null;
             }
 
-            return $state;
+            $filename = Str::ulid() . '.' . $file->getClientOriginalExtension();
+
+            $path = $file->storeAs(
+                $this->getDirectory(),
+                $filename,
+                $this->getDisk(),
+            );
+
+            if ($this->getVisibility() === 'public') {
+                rescue(fn () => Storage::disk($this->getDisk())->setVisibility($path, 'public'), report: false);
+            }
+
+            return $path;
         });
-    }
-
-    /**
-     * Define where the finalized recording should be saved.
-     */
-    public function disk(string $disk): static
-    {
-        $this->disk = $disk;
-
-        return $this;
     }
 
     /**
@@ -81,11 +68,6 @@ class Echoo extends Field
         $this->directory = $directory;
 
         return $this;
-    }
-
-    public function getDisk(): string
-    {
-        return $this->disk;
     }
 
     public function getDirectory(): string

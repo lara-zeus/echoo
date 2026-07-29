@@ -1,3 +1,6 @@
+@php
+    $url = $getAudioUrl();
+@endphp
 <x-dynamic-component
     :component="$getFieldWrapperView()"
     :field="$field"
@@ -29,8 +32,8 @@
             this.checkPermission();
 
             // If there's an existing saved file path, create a preview URL for it
-            if (this.state) {
-                this.audioUrl = `/storage/` + this.state;
+            if (this.state && @js($url)) {
+                this.audioUrl = @js($url);
             }
         },
 
@@ -108,7 +111,6 @@
             }
         }
     }">
-
         <div class="flex items-center w-full">
 
             <!-- Default State: Ready to Record -->
@@ -143,7 +145,8 @@
                     </x-filament::button>
                     <div class="flex items-center space-x-2 text-sm font-medium text-danger-600 dark:text-danger-400">
                         <span class="relative flex h-3 w-3">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger-400 opacity-75"></span>
+                          <span
+                              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger-400 opacity-75"></span>
                           <span class="relative inline-flex rounded-full h-3 w-3 bg-danger-500"></span>
                         </span>
                         <span>{{ __('zeus-echoo::echoo.recording') }}</span>
@@ -154,7 +157,7 @@
             <!-- Uploading State -->
             <template x-if="isUploading">
                 <div class="flex items-center space-x-2 text-sm font-medium text-primary-600 dark:text-primary-400">
-                    <x-filament::loading-indicator class="h-5 w-5" />
+                    <x-filament::loading-indicator class="h-5 w-5"/>
                     <span>{{ __('zeus-echoo::echoo.uploading') }}</span>
                 </div>
             </template>
@@ -163,7 +166,9 @@
             <template x-if="state && !recording && !isUploading">
                 <div class="flex items-center space-x-4 w-full max-w-sm">
                     <div class="flex-1">
-                        <audio :src="audioUrl || (state ? '/storage/' + state : '')" controls class="w-full h-10 rounded-lg"></audio>
+                        <audio
+                            x-bind:src="audioUrl"
+                            controls class="w-full h-10 rounded-lg"></audio>
                     </div>
                     <x-filament::icon-button
                         icon="heroicon-m-trash"
