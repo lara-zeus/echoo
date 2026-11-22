@@ -1,11 +1,14 @@
 <?php
 
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use LaraZeus\Echoo\Forms\Components\Echoo;
 use League\Flysystem\UnableToCheckFileExistence;
+use Livewire\Features\SupportFileUploads\FileNotPreviewableException;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Tests\Fixtures\TestAudioRecord;
 
 it('can be instantiated', function () {
     $component = Echoo::make('audio');
@@ -282,4 +285,152 @@ it('catches exception for temporaryUrl on driver without support', function () {
 
     $url = $component->getAudioUrl();
     expect($url)->toBeString()->toContain('/storage/recordings/audio.mp3');
+});
+
+it('signs livewire preview-file fallback url as relative wrapped with URL::to', function () {
+    Storage::fake('public');
+
+    $tempFile = Mockery::mock(TemporaryUploadedFile::class);
+    $tempFile->shouldReceive('exists')->andReturn(true);
+    $tempFile->shouldReceive('getFilename')->andReturn('test-audio.webm');
+    $tempFile->shouldReceive('guessExtension')->andReturn('webm');
+    $tempFile->shouldReceive('temporaryUrl')->andThrow(new FileNotPreviewableException($tempFile));
+
+    $component = new class('audio') extends Echoo
+    {
+        public mixed $mockState = null;
+
+        public function getState(): mixed
+        {
+            return $this->mockState;
+        }
+    };
+    $component->mockState = $tempFile;
+    $component->disk('public');
+
+    $url = $component->getAudioUrl();
+
+    expect($url)->toBeString()
+        ->toContain('/preview-file/test-audio.webm')
+        ->and(Request::create($url)->hasValidRelativeSignature())->toBeTrue();
+});
+
+it('deletes old file when clearing recording on a record', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('recordings/old.mp3', 'old audio');
+
+    $record = new TestAudioRecord(['audio' => 'recordings/old.mp3']);
+    $record->syncOriginal();
+
+    $component = Echoo::make('audio')
+        ->disk('public')
+        ->directory('recordings')
+        ->model($record);
+
+    $property = new ReflectionProperty($component, 'dehydrateStateUsing');
+    $property->setAccessible(true);
+    $modifier = $property->getValue($component)->bindTo($component, $component);
+
+    $dehydrated = $modifier(null);
+
+    expect($dehydrated)->toBeNull()
+        ->and(Storage::disk('public')->exists('recordings/old.mp3'))->toBeFalse();
+});
+
+it('deletes old file when replacing recording on a record', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('recordings/old.mp3', 'old audio');
+
+    $record = new TestAudioRecord(['audio' => 'recordings/old.mp3']);
+    $record->syncOriginal();
+
+    $tempFile = Mockery::mock(TemporaryUploadedFile::class);
+    $tempFile->shouldReceive('exists')->andReturn(true);
+    $tempFile->shouldReceive('getClientOriginalExtension')->andReturn('wav');
+    $tempFile->shouldReceive('storeAs')->andReturn('recordings/new.wav');
+
+    $component = Echoo::make('audio')
+        ->disk('public')
+        ->directory('recordings')
+        ->model($record);
+
+    $property = new ReflectionProperty($component, 'dehydrateStateUsing');
+    $property->setAccessible(true);
+    $modifier = $property->getValue($component)->bindTo($component, $component);
+
+    $dehydrated = $modifier($tempFile);
+
+    expect($dehydrated)->toBe('recordings/new.wav')
+        ->and(Storage::disk('public')->exists('recordings/old.mp3'))->toBeFalse();
+});
+
+it('does not delete old file when state is unchanged', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('recordings/old.mp3', 'old audio');
+
+    $record = new TestAudioRecord(['audio' => 'recordings/old.mp3']);
+    $record->syncOriginal();
+
+    $component = Echoo::make('audio')
+        ->disk('public')
+        ->directory('recordings')
+        ->model($record);
+
+    $property = new ReflectionProperty($component, 'dehydrateStateUsing');
+    $property->setAccessible(true);
+    $modifier = $property->getValue($component)->bindTo($component, $component);
+
+    $dehydrated = $modifier('recordings/old.mp3');
+
+    expect($dehydrated)->toBe('recordings/old.mp3')
+        ->and(Storage::disk('public')->exists('recordings/old.mp3'))->toBeTrue();
+});
+
+it('supports custom deleteUploadedFileUsing callback', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('recordings/old.mp3', 'old audio');
+
+    $record = new TestAudioRecord(['audio' => 'recordings/old.mp3']);
+    $record->syncOriginal();
+
+    $deleted = [];
+
+    $component = Echoo::make('audio')
+        ->disk('public')
+        ->directory('recordings')
+        ->model($record)
+        ->deleteUploadedFileUsing(function (string $file) use (&$deleted): void {
+            $deleted[] = $file;
+        });
+
+    $property = new ReflectionProperty($component, 'dehydrateStateUsing');
+    $property->setAccessible(true);
+    $modifier = $property->getValue($component)->bindTo($component, $component);
+
+    $modifier(null);
+
+    expect($deleted)->toBe(['recordings/old.mp3'])
+        ->and(Storage::disk('public')->exists('recordings/old.mp3'))->toBeTrue();
+});
+
+it('deletes old file for nested attribute name', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('recordings/nested-old.mp3', 'old audio');
+
+    $record = new TestAudioRecord(['meta' => ['audio' => 'recordings/nested-old.mp3']]);
+    $record->syncOriginal();
+
+    $component = Echoo::make('meta.audio')
+        ->disk('public')
+        ->directory('recordings')
+        ->model($record);
+
+    $property = new ReflectionProperty($component, 'dehydrateStateUsing');
+    $property->setAccessible(true);
+    $modifier = $property->getValue($component)->bindTo($component, $component);
+
+    $dehydrated = $modifier(null);
+
+    expect($dehydrated)->toBeNull()
+        ->and(Storage::disk('public')->exists('recordings/nested-old.mp3'))->toBeFalse();
 });
