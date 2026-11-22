@@ -2,7 +2,9 @@
 
 namespace LaraZeus\Echoo\Forms\Components;
 
+use Closure;
 use Filament\Forms\Components\Field;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use LaraZeus\Echoo\Concerns\HasAudioConfiguration;
@@ -17,12 +19,20 @@ class Echoo extends Field
 
     protected string $directory = 'recordings';
 
+    protected ?Closure $deleteUploadedFileUsing = null;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->dehydrateStateUsing(function ($state) {
+            $oldFile = $this->getOriginalAudioPath();
+
             if (! $state) {
+                if ($oldFile !== null) {
+                    $this->deleteUploadedFile($oldFile);
+                }
+
                 return null;
             }
 
@@ -52,12 +62,70 @@ class Echoo extends Field
                 $this->getDisk(),
             );
 
+            if (! is_string($path)) {
+                return null;
+            }
+
             if ($this->getVisibility() === 'public') {
                 rescue(fn () => Storage::disk($this->getDisk())->setVisibility($path, 'public'), report: false);
             }
 
+            if ($oldFile !== null && $oldFile !== $path) {
+                $this->deleteUploadedFile($oldFile);
+            }
+
             return $path;
         });
+    }
+
+    public function deleteUploadedFileUsing(?Closure $callback): static
+    {
+        $this->deleteUploadedFileUsing = $callback;
+
+        return $this;
+    }
+
+    public function deleteUploadedFile(string $file): static
+    {
+        if (blank($file)) {
+            return $this;
+        }
+
+        if ($this->deleteUploadedFileUsing) {
+            $this->evaluate($this->deleteUploadedFileUsing, [
+                'file' => $file,
+            ]);
+
+            return $this;
+        }
+
+        rescue(
+            fn () => Storage::disk($this->getDisk())->delete($file),
+            report: false,
+        );
+
+        return $this;
+    }
+
+    protected function getOriginalAudioPath(): ?string
+    {
+        $record = rescue(fn () => $this->getRecord(), report: false);
+
+        if (! $record) {
+            return null;
+        }
+
+        $attribute = $this->getName();
+
+        $oldFile = $record instanceof Model
+            ? ($record->getOriginal($attribute) ?? data_get($record, $attribute))
+            : data_get($record, $attribute);
+
+        if (! is_string($oldFile) || blank($oldFile) || filter_var($oldFile, FILTER_VALIDATE_URL) !== false) {
+            return null;
+        }
+
+        return $oldFile;
     }
 
     /**

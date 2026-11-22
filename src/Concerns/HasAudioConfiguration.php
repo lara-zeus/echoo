@@ -84,11 +84,12 @@ trait HasAudioConfiguration
                 try {
                     return $tempFile->temporaryUrl();
                 } catch (FileNotPreviewableException $e) {
-                    return URL::temporarySignedRoute(
+                    return URL::to(URL::temporarySignedRoute(
                         'livewire.preview-file',
                         now()->addMinutes(30)->endOfHour(),
-                        ['filename' => $tempFile->getFilename()]
-                    );
+                        ['filename' => $tempFile->getFilename()],
+                        absolute: false,
+                    ));
                 }
             }
         } catch (Throwable $e) {
